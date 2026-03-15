@@ -20,41 +20,49 @@ def XOPP_TO_ZIP(xopp_path: str, out_zip_path: str):
     ghost_doc = fitz.open(ghost_pdf_path)
 
     processed_pages = []
-    all_stroke_maps = [] # To collect stroke maps for each page
+    all_stroke_maps = []
+    rotations = [] # <--- Added to collect rotation state
 
     # 3. Processing Loop
     for i, page_data in enumerate(pages):
         ghost_page = ghost_doc[i]
-        pdf_path = render_page_layout(ghost_page, i, page_data.width, page_data.height)
         
-        # Capture both the path and the stroke map
+        # Pass rotation to the PDF layout engine
+        pdf_path = render_page_layout(
+            ghost_page, i, page_data.width, page_data.height, 
+            is_rotated=page_data.is_rotated
+        )
+        
+        # Stroke engine already uses page_data.is_rotated internally
         rm_path, stroke_map = xml_page_to_rm(page_data)
+        
         all_stroke_maps.append(stroke_map)
+        rotations.append(page_data.is_rotated) # <--- Record it
         
         processed_pages.append({
             "page_RM_path": rm_path, 
             "page_PDF_path": pdf_path
         })
 
-    # 4. Final Bundle (now returns UUIDs)
+    # 4. Final Bundle
     ZIP_path, doc_uuid, page_uuids = rms_and_pdfs_paths_to_zip(
         processed_pages, 
         out_zip_path,
         visible_name=os.path.basename(xopp_path).replace(".xopp", "")
     )
     
-    # 5. Create the Sync Session
+    # 5. Create the Sync Session - NOW PASSING ROTATIONS
     session_manager.create_session(
         doc_uuid=doc_uuid,
         page_uuids=page_uuids,
         page_stroke_maps=all_stroke_maps,
         page_dimensions=[(p.width, p.height) for p in pages],
-        original_xopp_path=xopp_path
+        original_xopp_path=xopp_path,
+        rotations=rotations # <--- Added this argument
     )
     
     # 6. Cleanup
     ghost_doc.close()
     os.remove(ghost_pdf_path)
-    # (Consider cleanup of individual temp files)
     
     return ZIP_path

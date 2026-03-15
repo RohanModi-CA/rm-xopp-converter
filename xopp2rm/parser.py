@@ -42,18 +42,18 @@ def xopp_to_xml(filepath: str) -> ET.Element:
         tree = ET.parse(filepath)
     return tree.getroot()
 
-def xml_tree_to_pages(root: ET.Element) -> List[XoppPage]:
-    """
-    Traverses the XML tree and converts every <page> 
-    into an XoppPage model.
-    """
-    pages = []
 
+def xml_tree_to_pages(root: ET.Element) -> List[XoppPage]:
+    pages = []
     for i, page_node in enumerate(root.findall('page')):
-        width = float(page_node.get('width'))
-        height = float(page_node.get('height'))
+        w = float(page_node.get('width'))
+        h = float(page_node.get('height'))
         
-        # Collect all strokes from all layers on this page
+        is_rotated = w > h
+        # If landscape, swap dimensions for the internal pipeline
+        internal_w = h if is_rotated else w
+        internal_h = w if is_rotated else h
+        
         strokes = []
         for layer in page_node.findall('layer'):
             for stroke_node in layer.findall('stroke'):
@@ -61,11 +61,11 @@ def xml_tree_to_pages(root: ET.Element) -> List[XoppPage]:
         
         pages.append(XoppPage(
             index=i,
-            width=width,
-            height=height,
-            strokes=strokes
+            width=internal_w,   # Engine sees the "tall" version
+            height=internal_h,  # Engine sees the "tall" version
+            strokes=strokes,
+            is_rotated=is_rotated
         ))
-        
     return pages
 
 def _parse_stroke_node(node: ET.Element) -> Stroke:
@@ -82,3 +82,4 @@ def _parse_stroke_node(node: ET.Element) -> Stroke:
         width=float(node.get('width', '1.0')),
         points=points
     )
+

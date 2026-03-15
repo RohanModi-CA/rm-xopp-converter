@@ -102,17 +102,36 @@ def get_total_inverse_matrix(pdf_w: float, pdf_h: float):
     return np.linalg.inv(forward)
 
 
-def get_new_stroke_coordinates(xpp_x, xpp_y, pdf_w, pdf_h):
+def get_new_stroke_coordinates(xpp_x, xpp_y, pdf_w, pdf_h, is_rotated=False):
     """Forward: XOPP Points -> RM Pixels."""
-    point = np.array([xpp_x, xpp_y, 1])
+    if is_rotated:
+        # 90 deg CCW: (x, y) -> (y, OrigWidth - x)
+        # Note: pdf_h is the Original Width because we swapped them in parser.py
+        orig_w = pdf_h 
+        new_x = xpp_y
+        new_y = orig_w - xpp_x
+    else:
+        new_x, new_y = xpp_x, xpp_y
+
+    point = np.array([new_x, new_y, 1])
     transform = get_total_forward_matrix(pdf_w, pdf_h)
     npoint = transform @ point
     return (npoint[0], npoint[1])
 
-def get_xopp_coordinates_from_rm(rm_x, rm_y, pdf_w, pdf_h):
+def get_xopp_coordinates_from_rm(rm_x, rm_y, pdf_w, pdf_h, is_rotated=False):
     """Backward: RM Pixels -> XOPP Points."""
     point = np.array([rm_x, rm_y, 1])
     transform = get_total_inverse_matrix(pdf_w, pdf_h)
     npoint = transform @ point
-    return (npoint[0], npoint[1])
+    
+    inv_x, inv_y = npoint[0], npoint[1]
+    
+    if is_rotated:
+        # 90 deg CW: (x, y) -> (OrigWidth - y, x)
+        orig_w = pdf_h
+        final_x = orig_w - inv_y
+        final_y = inv_x
+        return (final_x, final_y)
+    
+    return (inv_x, inv_y)
 

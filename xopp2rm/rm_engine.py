@@ -60,7 +60,7 @@ def xml_page_to_rm(page: XoppPage) -> Tuple[str, Dict]:
             rm_points = []
             
             for (x_xpp, y_xpp) in stroke.points:
-                rm_x, rm_y = get_new_stroke_coordinates(x_xpp, y_xpp, page.width, page.height)
+                rm_x, rm_y = get_new_stroke_coordinates(x_xpp, y_xpp, page.width, page.height, is_rotated=page.is_rotated)
                 rm_points.append(si.Point(
                     x=float(rm_x), y=float(rm_y), 
                     speed=20, direction=0, width=4, pressure=128

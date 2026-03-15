@@ -19,7 +19,7 @@ from typing import List, Dict, Tuple
 PROJ_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SESSIONS_DIR = os.path.join(PROJ_ROOT, "sessions")
 
-def create_session(doc_uuid, page_uuids, page_stroke_maps, page_dimensions, original_xopp_path):
+def create_session(doc_uuid, page_uuids, page_stroke_maps, page_dimensions, original_xopp_path, rotations):
     session_path = os.path.join(SESSIONS_DIR, doc_uuid)
     os.makedirs(session_path, exist_ok=True)
     
@@ -38,6 +38,7 @@ def create_session(doc_uuid, page_uuids, page_stroke_maps, page_dimensions, orig
             "xopp_page_index": i,
             "width": page_dimensions[i][0],
             "height": page_dimensions[i][1],
+            "is_rotated": rotations[i], 
             "strokes": page_stroke_maps[i]
         })
         

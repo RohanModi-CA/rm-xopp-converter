@@ -79,9 +79,12 @@ def merge_changes(session_path: str, rm_data: Dict[str, Any], output_path: str):
         seen_original_stroke_indices = set()
 
         for rm_stroke in rm_strokes:
-            # 1. Convert RM coordinates back to XOPP coordinates
+            # Get the rotation flag from manifest
+            is_rotated = page_manifest.get('is_rotated', False)
+            
+            # Convert RM coordinates back using the flag
             transformed_points = [
-                get_xopp_coordinates_from_rm(p[0], p[1], page_width, page_height)
+                get_xopp_coordinates_from_rm(p[0], p[1], page_width, page_height, is_rotated=is_rotated)
                 for p in rm_stroke['points']
             ]
             

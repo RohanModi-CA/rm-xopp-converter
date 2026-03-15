@@ -9,7 +9,7 @@ from .geometry import (
 )
 
 
-def render_page_layout(ghost_page: fitz.Page, page_index: int, src_w: float, src_h: float) -> str:
+def render_page_layout(ghost_page: fitz.Page, page_index: int, src_w: float, src_h: float,is_rotated=False) -> str:
     """Takes a rendered ghost page and fits it to the RM canvas."""
     fd, output_path = tempfile.mkstemp(suffix=f"_layout_{page_index}.pdf")
     os.close(fd)
@@ -17,13 +17,16 @@ def render_page_layout(ghost_page: fitz.Page, page_index: int, src_w: float, src
     out_doc = fitz.open()
     new_page = out_doc.new_page(width=CANONICAL_SHORT_EDGE, height=CANONICAL_LONG_EDGE)
 
-    # Calculate transformation
+    # Calculate transformation (src_w/src_h are already swapped if landscape)
     p_tl, p_br = get_new_pdf_corners(src_w, src_h)
     target_rect = fitz.Rect(p_tl[0], p_tl[1], p_br[0], p_br[1])
 
-    # Place the visual content from the Ghost PDF
-    new_page.show_pdf_page(target_rect, ghost_page.parent, ghost_page.number)
-    
+    # rotate=270 is 90 deg CCW
+    rot_val = 270 if is_rotated else 0
+    new_page.show_pdf_page(target_rect, ghost_page.parent, ghost_page.number, rotate=rot_val)
+
+
+
     # Apply hatching using your existing logic
     _apply_hatching(new_page, p_tl, p_br) 
 

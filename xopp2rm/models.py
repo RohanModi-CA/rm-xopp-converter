@@ -15,3 +15,4 @@ class XoppPage:
     width: float
     height: float
     strokes: List[Stroke]
+    is_rotated: bool = False
