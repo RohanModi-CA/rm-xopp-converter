@@ -13,4 +13,9 @@ RM_IP=10.11.99.1
 RM_PASSWORD=password
 ```
 
+Dependencies:
+```bash
+pip install packaging paramiko python-dotenv numpy pymupdf
+```
+
 Note: I vendored `ricklupton/rmscene` (MIT) for my own simplicity. Thanks.
