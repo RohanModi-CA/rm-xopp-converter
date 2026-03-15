@@ -85,19 +85,34 @@ def get_new_pdf_corners(pdf_w, pdf_h):
 
     return ((nTL[0], nTL[1]), (nBR[0], nBR[1]))
 
+
+def get_total_forward_matrix(pdf_w: float, pdf_h: float):
+    """Combines the 4 steps into a single transformation matrix."""
+    m1 = xournalpoint_to_pdf_matrix()
+    m2 = portrait_pixel_transform_matrix(pdf_w, pdf_h)
+    m3 = portrait_centre_transform_matrix()
+    m4 = points_to_rm_pixels_matrix()
+    
+    # Order of application: m4(m3(m2(m1(point))))
+    return m4 @ m3 @ m2 @ m1
+
+def get_total_inverse_matrix(pdf_w: float, pdf_h: float):
+    """Returns the mathematical inverse of the full forward pipeline."""
+    forward = get_total_forward_matrix(pdf_w, pdf_h)
+    return np.linalg.inv(forward)
+
+
 def get_new_stroke_coordinates(xpp_x, xpp_y, pdf_w, pdf_h):
-    point = np.ones(3)
-    point[0] = xpp_x
-    point[1] = xpp_y
+    """Forward: XOPP Points -> RM Pixels."""
+    point = np.array([xpp_x, xpp_y, 1])
+    transform = get_total_forward_matrix(pdf_w, pdf_h)
+    npoint = transform @ point
+    return (npoint[0], npoint[1])
 
-    xpp_to_pdf = xournalpoint_to_pdf_matrix()
-    pdf_to_pixel = portrait_pixel_transform_matrix(pdf_w, pdf_h)
-    pixel_to_centered = portrait_centre_transform_matrix()
-    pixel_scale = points_to_rm_pixels_matrix()
-    transform = pixel_scale @ pixel_to_centered @ pdf_to_pixel @ xpp_to_pdf
-
-
-
+def get_xopp_coordinates_from_rm(rm_x, rm_y, pdf_w, pdf_h):
+    """Backward: RM Pixels -> XOPP Points."""
+    point = np.array([rm_x, rm_y, 1])
+    transform = get_total_inverse_matrix(pdf_w, pdf_h)
     npoint = transform @ point
     return (npoint[0], npoint[1])
 
