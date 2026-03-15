@@ -1,0 +1,90 @@
+This **API.txt** provides a reference for integrating the `rm_io_tools` library into other Python projects or using the CLI utilities.
+
+---
+
+# API Reference: rm_io_tools
+
+A library for managing reMarkable (v2 format) documents via SSH/SFTP.
+
+## 1. Configuration
+The library requires a `.env` file located in the `rm_io_tools/` directory:
+```bash
+RM_IP=10.11.99.1
+RM_PASSWORD=your_password
+```
+
+## 2. Core Library Classes
+
+### RMClient (Transport Layer)
+`from rm_io_tools import RMClient`
+
+Handles the raw SSH connection and device-level service management.
+
+| Method | Description |
+| :--- | :--- |
+| `__enter__` / `__exit__` | Context manager support for automatic connection/cleanup. |
+| `connect()` | Manually opens SSH and SFTP sessions. |
+| `close()` | Manually closes sessions. |
+| `execute(command)` | Runs a shell command. Returns `(status, stdout, stderr)`. |
+| `upload(local, remote)` | Uploads a file to the reMarkable xochitl directory. |
+| `download(remote, local)` | Downloads a file from the reMarkable xochitl directory. |
+| `stop_xochitl()` | Stops the tablet UI (required for safe write operations). |
+| `start_xochitl()` | Restarts the tablet UI. |
+| `is_ui_running()` | Returns Boolean indicating if the UI service is active. |
+
+### RMCore (Logic Layer)
+`from rm_io_tools import RMCore`
+
+Handles reMarkable-specific logic, document discovery, and bundling.
+
+| Method | Description |
+| :--- | :--- |
+| `find_uuid_by_name(name)` | Searches `.metadata` files for a `visibleName`. Returns UUID string. |
+| `pull_as_zip(id, path)` | Takes a UUID or Name. Downloads all parts and bundles into a `.zip`. |
+| `push_zip(zip_path)` | Uploads a zip, stops UI, extracts to device, and restarts UI. |
+| `list_all_items()` | Returns a list of strings containing all `visibleNames` found on device. |
+
+---
+
+## 3. Implementation Example
+
+### Basic Library Usage
+```python
+from rm_io_tools import RMClient, RMCore
+
+# Using the context manager ensures the connection closes even on error
+with RMClient() as client:
+    core = RMCore(client)
+    
+    # Download a notebook by its UI name
+    core.pull_as_zip("Quick Notes", "backups/quick_notes.zip")
+    
+    # Upload a bundle (UI will restart automatically)
+    core.push_zip("new_template.zip")
+```
+
+---
+
+## 4. CLI Utilities
+
+These are wrappers located in the root of the `rm_io_tools/` directory.
+
+### rm_pullzip.py
+Downloads a notebook from the tablet and saves it as a zip.
+*   **Usage:** `python3 rm_pullzip.py "Document Name" [-o output.zip]`
+*   **Notes:** Automatically resolves UI names to internal UUIDs.
+
+### rm_sendzip.py
+Sends a zipped notebook bundle to the tablet.
+*   **Usage:** `python3 rm_sendzip.py my_document.zip`
+*   **Notes:** This script safely stops the `xochitl` process before extraction to prevent database corruption.
+
+---
+
+## 5. File Structure Reference
+The library assumes the reMarkable v2 format:
+- `<UUID>.metadata`: JSON file with UI info.
+- `<UUID>.content`: JSON file with page structure.
+- `<UUID>/`: Directory containing binary `.rm` stroke files.
+
+**ZIP Bundles** created by this API contain these three elements at their root.

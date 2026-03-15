@@ -1,0 +1,61 @@
+## 1. Directory Structure
+All files reside in: `/home/root/.local/share/remarkable/xochitl/`
+
+Each notebook consists of three primary components:
+1.  **`<UUID>.metadata`**: (JSON) High-level info (Name, Parent folder, Pinned status).
+2.  **`<UUID>.content`**: (JSON) Document structure (Page order, Pen settings, Templates).
+3.  **`<UUID>/`**: (Directory) Contains the binary stroke data for each page.
+
+---
+
+## 2. Component Analysis
+
+### A. The Metadata File (`.metadata`)
+This file tells the device where the document sits in the UI and how it is named.
+*   **visibleName**: The user-facing name (e.g., "5.1").
+*   **parent**: The UUID of the folder containing this file. If empty, it's in the root.
+*   **type**: `DocumentType` (a notebook/PDF) or `CollectionType` (a folder).
+*   **lastOpenedPage**: Zero-based index of the page displayed when the file is opened.
+
+### B. The Content File (`.content`)
+This is the "manifest" of the notebook. It defines the internal state and the order of pages.
+*   **formatVersion**: 2 (The current standard for software versions 3.x and above).
+*   **cPages (Cloud Pages)**: 
+    *   Contains the `pages` array.
+    *   Each page has a unique **Page UUID** (e.g., `c3b17d63...`).
+    *   **idx**: A fractional index (CRDT-based) used to maintain page order even when pages are moved or synced across devices.
+    *   **template**: Defines the background (e.g., "P US Legal").
+*   **extraMetadata**: Stores the "Last Used" state for tools (Pen type, Color, Brush size, Eraser mode). This allows the tablet to remember you were using a "Finelinerv2" in "Black" at size "2" when you last closed this specific notebook.
+
+### C. The Data Directory (`<UUID>/`)
+This folder contains the actual drawings.
+*   Files are named: `<PAGE_UUID>.rm`.
+*   The `.rm` files are binary files containing the pen coordinates, pressure, tilt, and speed.
+*   The names of these files **must** match the `id` values found in the `pages` array of the `.content` file.
+
+---
+
+## 3. Data Correlation (Example Trace)
+Based on the provided files, here is how the tablet renders the notebook named **"5.1"**:
+
+1.  **Identify Document:** The tablet finds `e0402... .metadata`, sees the name "5.1", and knows it belongs in folder `e0468...`.
+2.  **Order Pages:** It opens `e0402... .content`. It looks at the `pages` array and sorts them by their `idx` value:
+    *   Index `ba` -> Page UUID `c3b17d63...`
+    *   Index `bb` -> Page UUID `040c4d50...`
+    *   Index `bc` -> Page UUID `2f64f097...`
+3.  **Load Strokes:** To render the first page, it navigates to the directory `e0402.../` and reads the binary data inside `c3b17d63-8d92-45e9-a66f-e8d01b4d565b.rm`.
+4.  **Apply Background:** It applies the "P US Legal" template as specified in the `.content` file.
+
+---
+
+## 4. Observations on Timestamps
+The timestamps in your files (e.g., `1772647775051`) correspond to **March 2026**. 
+*   This indicates the system clock on the device was set forward or the files were generated/modified in a future-dated environment.
+*   `modified` values are in Unix Epoch milliseconds.
+
+## 5. Summary of Page IDs
+| Page Order | Index | Page UUID | File Path |
+| :--- | :--- | :--- | :--- |
+| 1 | ba | c3b17d63... | `e0402.../c3b17d63... .rm` |
+| 2 | bb | 040c4d50... | `e0402.../040c4d50... .rm` |
+| 3 | bc | 2f64f097... | `e0402.../2f64f097... .rm` |
